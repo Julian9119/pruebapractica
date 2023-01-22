@@ -9,14 +9,23 @@ import org.springframework.web.bind.annotation.RestController;
 import com.proyecto.entity.Categorie;
 import com.proyecto.entity.Nproduct;
 import com.proyecto.entity.Product;
+import com.proyecto.service.ServiceProyectoImpl;
 
-
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URL;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
+import com.google.common.base.CharMatcher;
 import javax.servlet.http.HttpServletRequest;
 
+import org.json.JSONObject;
+import org.springframework.boot.json.GsonJsonParser;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,100 +42,107 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonIOException;
+import com.google.gson.JsonParser;
 import com.google.gson.Gson;
-
+/**
+ * Clase controlador 
+ * Julian David Hernandez Torres
+ * 
+ * 
+ * @return
+ */
 @RestController
 @RequestMapping("/nexsys")
 
 public class Controller {
 
-	
-	
-    @GetMapping("/v1/products/")
-    public  ResponseEntity obtenerPerson(HttpServletRequest servletRequest) {
-    	ArrayList<Product> products = new ArrayList();
-    	Product product =new Product();
-        Product product2 =new Product();
-        product.setpId(4);
-        product.setName("Handmade Fresh Table");
-        product.setPriceFinal(687);
-        product.setDescription("Andy shoes are designed to keeping in... ");
-        
-        product2.setpId(45);
-        product2.setName("Handmade Fresh Table");
-        product2.setPriceFinal(687);
-        product2.setDescription("Andy shoes are designed to keeping in... ");
-      
-        products.add(product);
-        products.add(product2);
-       if(!products.isEmpty()) {
-    	  return ResponseEntity.ok(products);
-       }
-     
-		
-       else {
-    	   return ResponseEntity.notFound().build();
-       }
-        
-    
-    }
-    
-    @GetMapping("/v1/categories/")
-    public  ResponseEntity allcategories(HttpServletRequest servletRequest) {
-    	ArrayList<Categorie> categories = new ArrayList();
-    	Categorie categorie =new Categorie();
-    	Categorie categorie2 =new Categorie();
-         categorie.setcId(4);
-         categorie.setTitle("Hanmade Fresh Table");
-         categorie2.setcId(5);
-         categorie2.setTitle("Hanmade Fresh Table");
-         categories.add(categorie);
-         categories.add(categorie2);
-         if(!categories.isEmpty()) {
-       	  return ResponseEntity.ok(categories);
-          }
-        
-   		
-          else {
-       	   return ResponseEntity.notFound().build();
-          }
-           
-      
-		
-        
-        
-    
-    }
-    
-    @PostMapping("/v1/newProduct/")
-    public ResponseEntity crearPerson(HttpServletRequest servletRequest,@RequestBody Nproduct nProduct) {
-    	int pId=0;
-    	pId++;
-    	ArrayList<Nproduct> products = new ArrayList();
-    	Nproduct product =new Nproduct();
-    	product.setpId(pId);
-    	product.setName(nProduct.getName());   
-    	product.setPriceFInal(nProduct.getPriceFInal());
-    	product.setDescription(nProduct.getDescription());
-    	product.setCategoryId(nProduct.getCategoryId());
-    	product.setImagenUrl(nProduct.getImagenUrl());
-    	products.add(nProduct);
-    	 if(!products.isEmpty()) {
-            String formJson="{\n"+"\"pId\":"+product.getpId()+"\n"+"}";
-    		 System.out.println("Producto creado exitosamente"+" "+product.toString());
-    		 
-       	  return ResponseEntity.ok(formJson);
-          }
-        
-          else {
-       	   return ResponseEntity.notFound().build();
-          }
-           
-    	
-    	
-    }
-}
-    
-    
+	private final HttpClient httpClient = HttpClient.newBuilder().version(HttpClient.Version.HTTP_2).build();
+	private ServiceProyectoImpl service;
+	/**
+	 * Sirve para mostrar todos los productos
+	 * 
+	 * @param user
+	 * @return
+	 */
+	@GetMapping("/v1/products/")
+	public ResponseEntity GetAllProducts(HttpServletRequest servletRequest) {
+		service = new ServiceProyectoImpl();
+		HttpRequest request = HttpRequest.newBuilder().GET().uri(URI.create("https://api.escuelajs.co/api/v1/products"))
+				.setHeader("User-Agent", "Java 11 HttpClient Bot").build();
 
+		HttpResponse<String> response = null;
+		try {
+			response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+		} catch (IOException e) {
+
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+
+			e.printStackTrace();
+		}
+
+		ArrayList<Product> products = new ArrayList();
+		products = service.GetallProducts(response.body().toString());
+		return ResponseEntity.ok(products);
+	}
+	/**
+	 * Sirve para mostrar todas las categorias
+	 * 
+	 * @param user
+	 * @return
+	 */
+	@GetMapping("/v1/categories/")
+	public ResponseEntity allcategories(HttpServletRequest servletRequest) {
+
+		service = new ServiceProyectoImpl();
+		HttpRequest request = HttpRequest.newBuilder().GET()
+				.uri(URI.create("https://api.escuelajs.co/api/v1/categories"))
+				.setHeader("User-Agent", "Java 11 HttpClient Bot").build();
+
+		HttpResponse<String> response = null;
+		try {
+			response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+		} catch (IOException e) {
+
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+
+			e.printStackTrace();
+		}
+
+		ArrayList<Categorie> categories = new ArrayList();
+
+		categories = service.Getallcategoriess(response.body().toString());
+		return ResponseEntity.ok(categories);
+
+	}
+	/**
+	 * Sirve para grear un nuevo producto
+	 * 
+	 * @param user
+	 * @return
+	 */
+	@PostMapping("/v1/newProduct/")
+	public ResponseEntity crearPerson(HttpServletRequest servletRequest, @RequestBody Nproduct nProduct) {
+		int pId = 0;
+		pId++;
+		ArrayList<Nproduct> products = new ArrayList();
+		Nproduct product = new Nproduct();
+		product.setpId(pId);
+		product.setName(nProduct.getName());
+		product.setPriceFInal(nProduct.getPriceFInal());
+		product.setDescription(nProduct.getDescription());
+		product.setCategoryId(nProduct.getCategoryId());
+		product.setImagenUrl(nProduct.getImagenUrl());
+		products.add(nProduct);
+	
+
+			return ResponseEntity.ok(products);
+		
+
+		
+
+	}
+}
